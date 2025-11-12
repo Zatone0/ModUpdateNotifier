@@ -94,8 +94,8 @@ public:
 
 	bool bDisableNotifications; // Whether the player has chosen to opt out of receiving notifications
 
-	UFUNCTION(BlueprintCallable, Category = "Mod Update Notifier")
-	void Init(); // Initialize the module in subclasses
+	UFUNCTION(BlueprintCallable, Category = "Mod Update Notifier", Exec)
+	void CheckForModUpdates(); // Initialize the module in subclasses
 
 	UFUNCTION(BlueprintCallable, Category = "Mod Update Notifier")
 	void GetAvailableUpdates(TArray<FAvailableUpdateInfo>& OutAvailableUpdates) const; // Allows the widget to retrieve update information after it has been created. ONLY CALL THIS FROM Widget_MUN_Notification

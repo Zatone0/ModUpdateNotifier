@@ -29,7 +29,7 @@ UMUNMenuModule::UMUNMenuModule()
 	APIIndexRetrieved = 0;
 }
 
-void UMUNMenuModule::Init()
+void UMUNMenuModule::CheckForModUpdates()
 {
 	// Log metadata from ModUpdateNotifier for debug purposes
 	UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Loaded ModUpdateNotifier Menu Module."));
@@ -82,6 +82,8 @@ void UMUNMenuModule::Init()
 						void* PropertyAddress = Property->ContainerPtrToValuePtr<void>(Mod);
 
 						OptedOut = BoolProperty->GetPropertyValue(PropertyAddress);
+
+						UE_LOG(LogModUpdateNotifier, Verbose, TEXT("%s opted out of update checking"), *LoadedMods[Index].FriendlyName);
 					}
 					if (!OptedOut)
 					{
@@ -99,6 +101,8 @@ void UMUNMenuModule::Init()
 
 							SupportURLs.Add(OutValue);
 							HasSupportURLs.Add(true);
+
+							UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Successfully loaded Support URL for mod: %s"), *LoadedMods[Index].FriendlyName);
 						}
 						else {
 							UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Could not find Support_URL field for mod: %s"), *LoadedMods[Index].FriendlyName);
@@ -143,6 +147,7 @@ void UMUNMenuModule::Init()
 			Request->OnProcessRequestComplete().BindUObject(this, &UMUNMenuModule::OnResponseReceived);
 			Request->SetURL("https://api.ficsit.app/v1/mod/" + CurrentModReference + "/versions/all");
 			Request->SetVerb("GET");
+			Request->SetHeader(TEXT("User-Agent"), "X-UE5-ModUpdateNotifier-Agent");
 
 			Request->ProcessRequest();
 		}
