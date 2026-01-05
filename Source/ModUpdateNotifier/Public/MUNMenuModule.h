@@ -88,6 +88,9 @@ public:
 	TArray<bool> HasSupportURLs; // Whether a mod has supplied a support URL
 
 	UPROPERTY(BlueprintReadOnly)
+	TArray<FString> LockedDependencies;
+
+	UPROPERTY(BlueprintReadOnly)
 	TArray<FAvailableUpdateInfo> AvailableUpdates; // Known versions of installed mods
 
 	FModUpdateNotifier_ConfigStruct ModNotifierConfig; // Our global mod configuration structure

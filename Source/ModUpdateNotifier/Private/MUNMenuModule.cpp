@@ -62,6 +62,33 @@ void UMUNMenuModule::CheckForModUpdates()
 				FModInfo ModInfo;
 				ModLoadingLibrary->GetLoadedModInfo(CurrentModName, ModInfo);
 
+				// If this causes errors in future versions, add
+				// friend class UMUNMenuModule;
+				// to ModLoadingLibrary.h
+				// under
+				//
+				// struct SML_API FSMLPluginDescriptorMetadata {
+				//
+				// and
+				//
+				// class SML_API UModLoadingLibrary : public UGameInstanceSubsystem {
+				// GENERATED_BODY()
+
+				TMap<FString, FVersionRange> MyDependenciesVersions = ModLoadingLibrary->PluginMetadata.Find(ModInfo.Name)->DependenciesVersions;
+
+				for (const auto& MyDependencyVersion : MyDependenciesVersions)
+				{
+					FString DependencyName = MyDependencyVersion.Key;
+					FVersionRange DependencyVersion = MyDependencyVersion.Value;
+
+					if (!DependencyVersion.ToString().Contains(TEXT("^"))) // If the dependency does not contain a ^ (indicating any newer versions are allowed), we consider it to be locked and therefore don't issue a notification for it's updates
+					{
+						UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Dependency is locked, cannot allow update notification: %s"), *DependencyName);
+
+						LockedDependencies.Add(DependencyName);
+					}
+				}
+
 				UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Detected mod: %s."), *ModInfo.FriendlyName);
 
 				// If we find a module for the currently loaded mod, continue
@@ -256,7 +283,7 @@ void UMUNMenuModule::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePt
 					UE_LOG(LogModUpdateNotifier, Verbose, TEXT("The installed mod is up to date or newer than the available versions on SMR. %s"), *InstalledMods[Index]);
 				}
 
-				if (IsModOutOfDate)
+				if (IsModOutOfDate && !LockedDependencies.Contains(InstalledMods[Index])) // Only add if the mod is out of date and is not a locked dependency
 				{
 					FAvailableUpdateInfo ModAvailableUpdate = {
 						InstalledModFriendlyNames[Index],
