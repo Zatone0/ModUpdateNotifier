@@ -62,18 +62,6 @@ void UMUNMenuModule::CheckForModUpdates()
 				FModInfo ModInfo;
 				ModLoadingLibrary->GetLoadedModInfo(CurrentModName, ModInfo);
 
-				// If this causes errors in future versions, add
-				// friend class UMUNMenuModule;
-				// to ModLoadingLibrary.h
-				// under
-				//
-				// struct SML_API FSMLPluginDescriptorMetadata {
-				//
-				// and
-				//
-				// class SML_API UModLoadingLibrary : public UGameInstanceSubsystem {
-				// GENERATED_BODY()
-
 				TMap<FString, FVersionRange> MyDependenciesVersions = ModLoadingLibrary->PluginMetadata.Find(ModInfo.Name)->DependenciesVersions;
 
 				for (const auto& MyDependencyVersion : MyDependenciesVersions)
