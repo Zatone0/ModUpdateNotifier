@@ -97,6 +97,8 @@ public:
 
 	bool bDebugLogging; // Opt-in for debug logging to not spam the log during normal operation
 
+	bool bDisableNotifications; // Legacy thingy dont touch
+
 	UFUNCTION(BlueprintCallable, Category = "Mod Update Notifier", Exec)
 	void CheckForModUpdates(); // Initialize the module in subclasses
 

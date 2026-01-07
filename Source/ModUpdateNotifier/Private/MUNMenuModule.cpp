@@ -25,6 +25,7 @@ UMUNMenuModule::UMUNMenuModule()
 
 	bShowNotifications = ModNotifierConfig.bShowNotifications;
 	bDebugLogging = ModNotifierConfig.bDebugLogging;
+	bDisableNotifications = ModNotifierConfig.bDisableNotifications;
 
 	APIIndex = 0;
 	APIIndexRetrieved = 0;
@@ -53,7 +54,7 @@ void UMUNMenuModule::CheckForModUpdates()
 	}
 
 	// Should we check for updates?
-	if (bShowNotifications && this->GetWorld()->GetNetMode() != NM_DedicatedServer) // Temporarily disable checking on dedicated servers due to elevated number of SIGSEGV errors
+	if (bShowNotifications && this->GetWorld()->GetNetMode() != NM_DedicatedServer && !bDisableNotifications) // Temporarily disable checking on dedicated servers due to elevated number of SIGSEGV errors
 	{
 		// Get a reference to the World Module Manager, used later for check for the SMR_ID property on mod World Modules
 		UWorldModuleManager *WorldModuleManager = GetWorld()->GetSubsystem<UWorldModuleManager>();

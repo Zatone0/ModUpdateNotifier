@@ -15,6 +15,9 @@ public:
     UPROPERTY(BlueprintReadWrite)
     bool bDebugLogging{};
 
+    UPROPERTY(BlueprintReadWrite)
+    bool bDisableNotifications{};
+
     /* Retrieves active configuration value and returns object of this struct containing it */
     static FModUpdateNotifier_ConfigStruct GetActiveConfig(UObject* WorldContext) {
         FModUpdateNotifier_ConfigStruct ConfigStruct{};
