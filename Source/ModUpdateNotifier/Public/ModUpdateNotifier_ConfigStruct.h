@@ -10,7 +10,10 @@ struct FModUpdateNotifier_ConfigStruct {
     GENERATED_BODY()
 public:
     UPROPERTY(BlueprintReadWrite)
-    bool bDisableNotifications{};
+    bool bShowNotifications{};
+
+    UPROPERTY(BlueprintReadWrite)
+    bool bDebugLogging{};
 
     /* Retrieves active configuration value and returns object of this struct containing it */
     static FModUpdateNotifier_ConfigStruct GetActiveConfig(UObject* WorldContext) {

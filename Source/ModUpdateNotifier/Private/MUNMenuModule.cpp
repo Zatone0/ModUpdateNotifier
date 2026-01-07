@@ -1,4 +1,4 @@
-// Copyright 2024 Jesse Hodgson.
+// Copyright 2024 - 2026 Jesse Hodgson.
 
 #include "MUNMenuModule.h"
 
@@ -23,7 +23,8 @@ UMUNMenuModule::UMUNMenuModule()
 	#endif
 	}
 
-	bDisableNotifications = ModNotifierConfig.bDisableNotifications;
+	bShowNotifications = ModNotifierConfig.bShowNotifications;
+	bDebugLogging = ModNotifierConfig.bDebugLogging;
 
 	APIIndex = 0;
 	APIIndexRetrieved = 0;
@@ -42,9 +43,17 @@ void UMUNMenuModule::CheckForModUpdates()
 	ModLoadingLibrary->GetLoadedModInfo("ModUpdateNotifier", ModNotifierMetaInfo);
 	UE_LOG(LogModUpdateNotifier, Verbose, TEXT("%s"), *ModNotifierMetaInfo.FriendlyName.Append(", " + ModNotifierMetaInfo.Version.ToString()));
 	UE_LOG(LogModUpdateNotifier, Display, TEXT("Build Date: %s %s"), ANSI_TO_TCHAR(__DATE__), ANSI_TO_TCHAR(__TIME__));
+	if (bDebugLogging)
+	{
+		UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Debug Logging is ENABLED"));
+	}
+	else
+	{
+		UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Debug Logging is DISABLED"));
+	}
 
 	// Should we check for updates?
-	if (!bDisableNotifications && this->GetWorld()->GetNetMode() != NM_DedicatedServer) // Temporarily disable checking on dedicated servers due to elevated number of SIGSEGV errors
+	if (bShowNotifications && this->GetWorld()->GetNetMode() != NM_DedicatedServer) // Temporarily disable checking on dedicated servers due to elevated number of SIGSEGV errors
 	{
 		// Get a reference to the World Module Manager, used later for check for the SMR_ID property on mod World Modules
 		UWorldModuleManager *WorldModuleManager = GetWorld()->GetSubsystem<UWorldModuleManager>();
@@ -62,14 +71,15 @@ void UMUNMenuModule::CheckForModUpdates()
 				FModInfo ModInfo;
 				ModLoadingLibrary->GetLoadedModInfo(CurrentModName, ModInfo);
 
-				TMap<FString, FVersionRange> MyDependenciesVersions = ModLoadingLibrary->PluginMetadata.Find(ModInfo.Name)->DependenciesVersions;
+				// Check for locked dependencies that shouldn't prompt for updates
+				TMap<FString, FVersionRange> ModDependencies = ModLoadingLibrary->PluginMetadata.Find(ModInfo.Name)->DependenciesVersions;
 
-				for (const auto& MyDependencyVersion : MyDependenciesVersions)
+				for (const auto& ModDependencyVersion : ModDependencies)
 				{
-					FString DependencyName = MyDependencyVersion.Key;
-					FVersionRange DependencyVersion = MyDependencyVersion.Value;
+					FString DependencyName = ModDependencyVersion.Key;
+					FVersionRange DependencyVersion = ModDependencyVersion.Value;
 
-					if (!DependencyVersion.ToString().Contains(TEXT("^"))) // If the dependency does not contain a ^ (indicating any newer versions are allowed), we consider it to be locked and therefore don't issue a notification for it's updates
+					if (!DependencyVersion.ToString().Contains(TEXT("^"))) // If the dependency does not contain a ^ (indicating any newer versions are allowed), we consider it to be locked and don't issue a notification for it's updates
 					{
 						UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Dependency is locked, cannot allow update notification: %s"), *DependencyName);
 
@@ -77,7 +87,10 @@ void UMUNMenuModule::CheckForModUpdates()
 					}
 				}
 
-				UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Detected mod: %s."), *ModInfo.FriendlyName);
+				if (bDebugLogging)
+				{
+					UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Detected mod: %s."), *ModInfo.FriendlyName);
+				}
 
 				// If we find a module for the currently loaded mod, continue
 				if (WorldModuleManager->FindModule(FName(*LoadedMods[Index].Name)))
@@ -97,8 +110,6 @@ void UMUNMenuModule::CheckForModUpdates()
 						void* PropertyAddress = Property->ContainerPtrToValuePtr<void>(Mod);
 
 						OptedOut = BoolProperty->GetPropertyValue(PropertyAddress);
-
-						UE_LOG(LogModUpdateNotifier, Verbose, TEXT("%s opted out of update checking"), *LoadedMods[Index].FriendlyName);
 					}
 					if (!OptedOut)
 					{
@@ -117,10 +128,16 @@ void UMUNMenuModule::CheckForModUpdates()
 							SupportURLs.Add(OutValue);
 							HasSupportURLs.Add(true);
 
-							UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Successfully loaded Support URL for mod: %s"), *LoadedMods[Index].FriendlyName);
+							if (bDebugLogging)
+							{
+								UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Successfully loaded Support URL for mod: %s"), *LoadedMods[Index].FriendlyName);
+							}
 						}
 						else {
-							UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Could not find Support_URL field for mod: %s"), *LoadedMods[Index].FriendlyName);
+							if (bDebugLogging)
+							{
+								UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Could not find Support_URL field for mod: %s"), *LoadedMods[Index].FriendlyName);
+							}
 
 							SupportURLs.Add("none");
 							HasSupportURLs.Add(false);
@@ -202,6 +219,7 @@ void UMUNMenuModule::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePt
 				FString VersionSymbols;
 				FString ChangeListNumber;
 
+				// Check if the mod supports our current game version (Useful for not showing versions exclusive to the Experimental branch)
 				JsonObject->GetStringField(ANSI_TO_TCHAR("game_version")).Split(">=", &VersionSymbols, &ChangeListNumber, ESearchCase::IgnoreCase, ESearchDir::FromStart);
 
 				uint64 NewVersionCL = UKismetStringLibrary::Conv_StringToInt64(ChangeListNumber);
@@ -217,8 +235,6 @@ void UMUNMenuModule::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePt
 						Version.Split(".", &MajorVersionOut,&MinorVersionOut, ESearchCase::IgnoreCase, ESearchDir::FromStart);
 						MinorVersionOut.Split(".", &MinorVersionOut, &PatchVersionOut, ESearchCase::IgnoreCase, ESearchDir::FromStart);
 
-
-
 						FVersion OutVersion = {
 							UKismetStringLibrary::Conv_StringToInt64(MajorVersionOut),
 							UKismetStringLibrary::Conv_StringToInt64(MinorVersionOut),
@@ -230,12 +246,12 @@ void UMUNMenuModule::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePt
 							HighestVersion = OutVersion;
 						}
 					}
-					else
+					else if (bDebugLogging)
 					{
-						UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Version %s contains a `-`, excluding."), *Version);
+							UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Version %s contains a `-`, excluding."), *Version);
 					}
 				}
-				else
+				else if (bDebugLogging)
 				{
 					UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Version %s is newer than the game version, excluding."), *Version);
 				}
@@ -243,9 +259,12 @@ void UMUNMenuModule::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePt
 
 			APIVersions[InstalledMods.Find(ModReference)] = HighestVersion;
 
-			UE_LOG(LogModUpdateNotifier, Verbose, TEXT("%s: %s"), *ModReference, *HighestVersion.ToString());
+			if (bDebugLogging)
+			{
+				UE_LOG(LogModUpdateNotifier, Verbose, TEXT("%s: %s"), *ModReference, *HighestVersion.ToString());
+			}
 		}
-		else
+		else if (bDebugLogging)
 		{
 			UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Invalid response: no field \"data\" found."));
 		}
@@ -266,7 +285,7 @@ void UMUNMenuModule::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePt
 				{
 					IsModOutOfDate = true;
 				}
-				else
+				else if (bDebugLogging)
 				{
 					UE_LOG(LogModUpdateNotifier, Verbose, TEXT("The installed mod is up to date or newer than the available versions on SMR. %s"), *InstalledMods[Index]);
 				}
@@ -305,9 +324,9 @@ void UMUNMenuModule::OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePt
 	else {
 		UE_LOG(LogModUpdateNotifier, Verbose, TEXT("Unable to connect to the API, user may be offline."));
 	}
-
 }
 
+// When the widget calls for updates, send our array of processed updates
 void UMUNMenuModule::GetAvailableUpdates(TArray<FAvailableUpdateInfo>& OutAvailableUpdates) const
 {
 	OutAvailableUpdates = AvailableUpdates;

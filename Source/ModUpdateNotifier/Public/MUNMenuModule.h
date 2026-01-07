@@ -1,4 +1,4 @@
-// Copyright 2024 Jesse Hodgson.
+// Copyright 2024 - 2026 Jesse Hodgson.
 
 #pragma once
 
@@ -14,8 +14,6 @@ USTRUCT(BlueprintType)
 struct FAvailableUpdateInfo // Struct containing all info from the arrays for each mod
 {
 	GENERATED_BODY()
-
-public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString ModFriendlyName;
@@ -95,7 +93,9 @@ public:
 
 	FModUpdateNotifier_ConfigStruct ModNotifierConfig; // Our global mod configuration structure
 
-	bool bDisableNotifications; // Whether the player has chosen to opt out of receiving notifications
+	bool bShowNotifications; // Whether the player has chosen to opt out of receiving notifications
+
+	bool bDebugLogging; // Opt-in for debug logging to not spam the log during normal operation
 
 	UFUNCTION(BlueprintCallable, Category = "Mod Update Notifier", Exec)
 	void CheckForModUpdates(); // Initialize the module in subclasses
@@ -109,7 +109,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
 	void ChangelogProcessed(const FString& Changelog); // Allows the widget to retrieve a specific mod's changelog
 
-	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, const bool bWasSuccessful); // Triggered when we receive a response from the Satisfactory Mod Repository (https://api.ficsit.app/v1/) REST API
+	// Triggered when we receive a response from the Satisfactory Mod Repository (https://api.ficsit.app/v1/) REST API for mod updates
+	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, const bool bWasSuccessful);
 
+	// Triggered when we receive a response containing a mod changelog
 	void OnChangelogReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, const bool bWasSuccessful);
 };
