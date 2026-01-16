@@ -5,3 +5,8 @@
 
 # Ignore Crypto.json because the mod doesn't use pak file encryption
 /Modding/*
+.idea/editor.xml
+.idea/indexLayout.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/projectSettingsUpdater.xml
+.idea/vcs.xml
