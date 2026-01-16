@@ -123,5 +123,6 @@ protected:
 private:
 	void CancelPendingRequests();
 
+	UPROPERTY()
 	TArray<FHttpRequestPtr> PendingRequests;
 };
